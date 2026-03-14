@@ -2,7 +2,7 @@ name: Build GraalVM images
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 permissions:
@@ -18,16 +18,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
       - name: Discover Java versions
         id: set-versions
         run: |
           VERSIONS=$(find java/GraaLVM -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort -V)
           echo "Discovered Java versions: $VERSIONS"
-          JSON=$(printf '%s\n' $VERSIONS | jq -R . | jq -s .)
-          echo "versions=$JSON" >> $GITHUB_OUTPUT
+          ARRAY="["
+          FIRST=true
+          for v in $VERSIONS; do
+            if [ "$FIRST" = true ]; then
+              ARRAY="${ARRAY}\"$v\""
+              FIRST=false
+            else
+              ARRAY="${ARRAY},\"$v\""
+            fi
+          done
+          ARRAY="${ARRAY}]"
+          echo "versions=$ARRAY" >> $GITHUB_OUTPUT
 
   build-matrix:
     needs: discover
