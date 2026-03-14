@@ -18,13 +18,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Discover Java versions
         id: set-versions
         run: |
-          # List all subfolders under java/GraaLVM
           VERSIONS=$(find java/GraaLVM -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort -V)
           echo "Discovered Java versions: $VERSIONS"
-          # Format as JSON array for matrix
           JSON=$(printf '%s\n' $VERSIONS | jq -R . | jq -s .)
           echo "versions=$JSON" >> $GITHUB_OUTPUT
 
@@ -34,6 +35,7 @@ jobs:
     strategy:
       matrix:
         version: ${{ fromJson(needs.discover.outputs.versions) }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -58,10 +60,3 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:java_graalvm_${{ matrix.version }}
             ghcr.io/${{ github.repository }}:java_graalvm_${{ matrix.version }}-${{ github.sha }}
-
-      - name: Tag latest for highest version
-        if: ${{ matrix.version == needs.discover.outputs.versions[-1] }}
-        run: |
-          docker pull ghcr.io/${{ github.repository }}:java_graalvm_${{ matrix.version }}
-          docker tag ghcr.io/${{ github.repository }}:java_graalvm_${{ matrix.version }} ghcr.io/${{ github.repository }}:java_graalvm_latest
-          docker push ghcr.io/${{ github.repository }}:java_graalvm_latest
